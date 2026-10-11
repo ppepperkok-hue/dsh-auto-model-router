@@ -1,5 +1,5 @@
 /**
- * dsh-auto-model-router — entry point (Host half).
+ * dsh-auto-model-router 鈥?entry point (Host half).
  *
  * Registers one virtual LLM provider whose adapter scores each request from the
  * live prompt and dispatches it to the cheapest tier that fits, walking that
@@ -26,29 +26,30 @@ const inject = ['llm']
 
 /** Plugin configuration. Every field is optional; the defaults are this machine's measured routes. */
 const Config = z.object({
-  provider: z.string().default('auto').volatile(),
+  provider: z.string().default('auto'),
   displayName: z.string().default('Auto Model Router'),
   enabled: z.boolean().default(true),
   /**
    * Where the `agent/request` hook may rewrite routes. `subagents` is the
    * default: delegated task packages get the model their difficulty deserves.
    * `all` also reroutes the main agent; `off` leaves every route untouched.
-   * Marked volatile so the plugin settings page can change it live.
+   * Also editable on the plugin settings page: the settings section installed
+   * below is read on every request, so a change applies without a reload.
    */
-  agentScope: z.union(['off', 'subagents', 'all']).default('subagents').volatile(),
+  agentScope: z.union(['off', 'subagents', 'all']).default('subagents'),
   /** Score and log the decision without changing the route. */
-  dryRun: z.boolean().default(false).volatile(),
-  defaultTier: z.string().default('standard').volatile(),
-  hysteresis: z.natural().max(4).default(1).volatile(),
-  maxFallbacks: z.natural().max(8).default(2).volatile(),
-  explain: z.boolean().default(true).volatile(),
+  dryRun: z.boolean().default(false),
+  defaultTier: z.string().default('standard'),
+  hysteresis: z.natural().max(4).default(1),
+  maxFallbacks: z.natural().max(8).default(2),
+  explain: z.boolean().default(true),
   /**
    * Optional overrides. Both are validated by this plugin's own normalizers
    * (`normalizeTiers`, `resolveThresholds`) rather than by a nested schema, so a
    * partially specified tier keeps its defaults instead of being dropped whole.
-   * The threshold object is volatile: editing it takes effect on the next request.
+   * The threshold object is live: editing it takes effect on the next request.
    */
-  thresholds: z.any().default(null).volatile(),
+  thresholds: z.any().default(null),
   tiers: z.array(z.any()).default([]),
 })
 
@@ -105,7 +106,7 @@ export function apply(ctx, config) {
         setSource: (source) => { settingsSource = source },
         onChange: () => {},
       })
-      ctx.logger?.info?.(`auto-model-router: settings section "${SETTINGS_NAMESPACE}" installed (edit it under Settings → Plugins)`)
+      ctx.logger?.info?.(`auto-model-router: settings section "${SETTINGS_NAMESPACE}" installed (edit it under Settings 鈫?Plugins)`)
     } catch (error) {
       ctx.logger?.warn?.(`auto-model-router: settings section unavailable (${String(error?.message ?? error)}); the composition entry stays authoritative`)
     }
@@ -182,7 +183,7 @@ function registerPlanTool(ctx, { provider, tiers, thresholds }) {
         const chain = tier.candidates.map((entry, index) => `  ${index + 1}. ${entry.provider}/${entry.model}${entry.reasoningEffort === undefined ? '' : ` (${entry.reasoningEffort})`}`)
         return [
           `tier: ${tier.id} (${tier.name})`,
-          `score: ${score} — ${contributions.map((entry) => `${entry.label}${entry.value >= 0 ? '+' : ''}${entry.value}`).join(' ') || 'flat'}`,
+          `score: ${score} 鈥?${contributions.map((entry) => `${entry.label}${entry.value >= 0 ? '+' : ''}${entry.value}`).join(' ') || 'flat'}`,
           `context window assumed: ${tier.contextWindow}`,
           `fallback chain:`,
           ...chain,

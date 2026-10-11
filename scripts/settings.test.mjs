@@ -12,8 +12,13 @@
  */
 
 import assert from 'node:assert/strict'
+
+// Load cordis first: some loader builds patch the schema prototype at runtime,
+// and the config check below must run against the same schema the Host sees.
+await import('file:///C:/Users/Administrator/.dsh/profiles/node_modules/@deepseek-ai/cordis/lib/index.js').catch(() => undefined)
+
 import * as plugin from '../index.js'
-import { SETTINGS_NAMESPACE } from '../src/live-config.js'
+import { SETTINGS_NAMESPACE, plain } from '../src/live-config.js'
 
 const makeEmitter = () => {
   const listeners = new Map()
@@ -88,6 +93,20 @@ const tiers = [
   { id: 'deep', name: 'Deep', candidates: [{ provider: 'strong', model: 'strong-1' }] },
   { id: 'max', name: 'Max', candidates: [{ provider: 'strongest', model: 'strongest-1' }] },
 ]
+
+await check('the validated config yields primitives, not wrapped references', () => {
+  const resolved = plugin.Config({})
+  assert.equal(resolved.agentScope, 'subagents', 'the default scope must be a plain string')
+  assert.equal(typeof resolved.agentScope, 'string')
+  assert.equal(resolved.dryRun, false)
+  assert.equal(typeof resolved.dryRun, 'boolean')
+  assert.equal(resolved.defaultTier, 'standard')
+  assert.equal(resolved.hysteresis, 1)
+  // And the live view must unwrap anything a loader decides to wrap.
+  assert.equal(plain({ get: () => 'all' }), 'all')
+  assert.equal(plain({ value: true }), true)
+  assert.equal(plain('subagents'), 'subagents')
+})
 
 await check('the plugin installs its settings section under its own namespace', () => {
   const ctx = makeCtx(['cheap', 'mid'])
