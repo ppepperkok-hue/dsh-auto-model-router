@@ -1,0 +1,42 @@
+{
+  "name": "dsh-auto-model-router",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Auto Model Router for DSH — registers a virtual `auto` LLM provider whose adapter scores each request's difficulty from the live prompt and dispatches it to the cheapest model tier that can do the job, with an ordered fallback chain inside every tier.",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./classify": "./src/classify.js",
+    "./routes": "./src/routes.js",
+    "./host-hook": "./src/host-hook.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node scripts/selftest.mjs && node scripts/host-hook.test.mjs",
+    "test:settings": "node scripts/settings.test.mjs",
+    "test:integration": "node scripts/integration.mjs",
+    "plan": "node scripts/plan.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "llm-provider",
+    "model-router",
+    "auto"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-llm": "^0.1.2-rc.1 || ^0.1.7-rc.2 || ^0.2.0-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "license": "MIT"
+}

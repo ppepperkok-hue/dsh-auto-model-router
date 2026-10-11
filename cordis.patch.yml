@@ -1,0 +1,9 @@
+# dsh-auto-model-router bundle patch.
+#
+# One `insert` row mounts both halves at once: the Host half registers the
+# virtual `auto` provider on `ctx.llm`, and package.json's `dsh.bundle.patch`
+# is what makes the loader read this file.
+- insert:
+    - id: auto-model-router
+      name: 'dsh-auto-model-router'
+      config: {}
