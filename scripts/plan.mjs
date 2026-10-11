@@ -17,7 +17,9 @@ const table = argv.includes('--table')
 const constraintsOnly = argv.includes('--constraints')
 const contextAt = argv.indexOf('--context')
 const contextChars = contextAt >= 0 ? Number(argv[contextAt + 1]) : 0
-const words = argv.filter((arg, index) => !arg.startsWith('--') && index !== contextAt + 1)
+// Only drop the argument that belongs to `--context`; with no flag, `contextAt`
+// is -1 and a naive `index !== contextAt + 1` would eat the task text itself.
+const words = argv.filter((arg, index) => !arg.startsWith('--') && (contextAt < 0 || index !== contextAt + 1))
 const task = words.join(' ')
 
 const tiers = normalizeTiers()
