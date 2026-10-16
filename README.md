@@ -1,5 +1,12 @@
 # dsh-auto-model-router
 
+<!-- moe-counter:start -->
+<p align="center">
+  <a href="https://github.com/journey-ad/Moe-Counter"><img src="https://count.getloli.com/get/@ppepperkok-hue.dsh-auto-model-router?theme=asoul" alt="README views" width="360" /></a>
+  <br /><sub>README views · Image requests, not unique visitors.</sub>
+</p>
+<!-- moe-counter:end -->
+
 Route a DSH request to the model that fits the job. The plugin scores each
 request from the live prompt — length, context size, tool churn, intent keywords
 — maps it onto four tiers, and dispatches to the cheapest tier that can do the
