@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: npm test (Node 22.19)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 22.19
+        uses: actions/setup-node@v7
+        with:
+          # Floor of the engines range (^22.19.0 || >=24.0.0).
+          node-version: "22.19.0"
+          # No dependency cache: this repository has no lockfile.
+
+      - name: Syntax-check entry point, sources and scripts
+        run: |
+          for file in index.js src/*.js scripts/*.mjs; do
+            node --check "$file"
+          done
+
+      - name: Run selftest and host-hook tests
+        # scripts/selftest.mjs and scripts/host-hook.test.mjs are dependency-free,
+        # so no npm install is needed.
+        run: npm test
+
+      - name: Install settings-test dependency in a scratch prefix
+        # scripts/settings.test.mjs imports ../index.js, which needs the public
+        # @deepseek-ai/schemastery. It is already declared as a peerDependency
+        # here, so a plain install in the checkout is a silent no-op; install
+        # the pinned version into a throwaway prefix and expose only its
+        # node_modules to the checkout. package.json and the lockfile are not
+        # touched.
+        run: |
+          npm install --no-save --no-package-lock \
+            --prefix "$RUNNER_TEMP/settings-deps" \
+            @deepseek-ai/schemastery@3.18.5
+          cp -R "$RUNNER_TEMP/settings-deps/node_modules" node_modules
+
+      - name: Run settings contract tests
+        # scripts/settings.test.mjs pre-imports cordis from a hardcoded Windows
+        # DSH profile path behind a catch; on Linux that import is a no-op. The
+        # six checks below do not depend on it, and the suite was verified with
+        # that path made unavailable.
+        #
+        # npm run test:integration stays excluded: it imports cordis and
+        # @deepseek-ai/dsh-llm from the same hardcoded Windows profile path
+        # with no fallback, so it cannot resolve on a Linux runner.
+        run: npm run test:settings
