@@ -49,9 +49,11 @@ const makeEmitter = () => {
 const makeCtx = (providers) => {
   const emitter = makeEmitter()
   const sections = []
+  const tools = []
   return {
     ...emitter,
     sections,
+    tools,
     llm: {
       registerAdapter() {},
       listProviders: () => providers.map((id) => ({ id })),
@@ -59,14 +61,18 @@ const makeCtx = (providers) => {
     },
     logger: { info() {}, warn() {}, debug() {} },
     inject(names, callback) {
-      if (!names.includes('settings')) return
-      callback({
-        settings: {
-          installSection(owner, ns, schema, entry, hooks) {
-            sections.push({ ns, entry, hooks })
+      if (names.includes('settings')) {
+        callback({
+          settings: {
+            installSection(owner, ns, schema, entry, hooks) {
+              sections.push({ ns, entry, hooks })
+            },
           },
-        },
-      })
+        })
+      }
+      if (names.includes('tools')) {
+        callback({ tools: { defineTool: (spec) => { tools.push(spec) } } })
+      }
     },
     effect(callback) {
       return callback()
@@ -168,6 +174,16 @@ await check('a thresholds edit re-tiers the same prompt', async () => {
   ctx.sections[0].hooks.setSource(() => ({ agentScope: 'all', hysteresis: 0, thresholds: { standard: 99, deep: 199, max: 299 } }))
   const raised = await agent.ctx.pick('agent/request')({}, async () => ({ provider: 'mid', model: 'mid-1' }))
   assert.equal(raised.provider, 'cheap', 'raising the cut-offs must drop the same prompt to the cheapest tier')
+})
+
+await check('the planning tool re-resolves thresholds after a settings edit', () => {
+  const ctx = makeCtx(['cheap', 'mid'])
+  plugin.apply(ctx, { provider: 'auto', tiers, agentScope: 'subagents' })
+  assert.equal(ctx.tools.length, 1, 'the plan tool must still be registered')
+  const task = '实现一个解析器，并补上单元测试'
+  assert.match(ctx.tools[0].execute({ task }), /^tier: standard /)
+  ctx.sections[0].hooks.setSource(() => ({ thresholds: { standard: 99, deep: 199, max: 299 } }))
+  assert.match(ctx.tools[0].execute({ task }), /^tier: tiny /, 'a settings edit must reach the planning tool on the next call')
 })
 
 console.log(`\n${passed} settings checks passed`)

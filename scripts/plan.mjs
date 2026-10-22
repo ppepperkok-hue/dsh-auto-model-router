@@ -9,7 +9,7 @@
  * adapter runs inside a live request.
  */
 
-import { collectSignals, scoreSignals, tierForScore } from '../src/classify.js'
+import { evaluateTask } from '../src/plan.js'
 import { CONSTRAINTS, DEFAULT_THRESHOLDS, TIER_ORDER, normalizeTiers } from '../src/routes.js'
 
 const argv = process.argv.slice(2)
@@ -44,11 +44,14 @@ if (task.length === 0) {
   process.exit(2)
 }
 
-const signals = collectSignals({ messages: [{ role: 'user', content: [{ type: 'text', text: task }] }], tools: [] })
-signals.totalChars = task.length + (Number.isFinite(contextChars) ? contextChars : 0)
-const { score, contributions } = scoreSignals(signals)
-const tierId = tierForScore(score, DEFAULT_THRESHOLDS)
-const tier = tiers.find((entry) => entry.id === tierId) ?? tiers[0]
+// Same scorer and same character accounting as the `auto_route_plan` tool, so
+// a threshold decision cannot drift by the one newline `collectSignals` adds.
+const { score, contributions, tier } = evaluateTask({
+  task,
+  contextChars: Number.isFinite(contextChars) ? contextChars : 0,
+  thresholds: DEFAULT_THRESHOLDS,
+  tiers,
+})
 
 console.log(`task      : ${task}`)
 console.log(`score     : ${score}  (${contributions.map((entry) => `${entry.label}${entry.value >= 0 ? '+' : ''}${entry.value}`).join(' ') || 'flat'})`)
